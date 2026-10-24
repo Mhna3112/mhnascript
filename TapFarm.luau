@@ -1,22 +1,19 @@
--- Tap Simulator REBORN (PlaceVersion 4025) — auto farm: Tap + Hatch + EquipBest, có UI.
--- Chạy lại script sẽ tự dừng bản cũ. Tắt: nút X trên UI hoặc getgenv().TapFarm.Stop().
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local CONFIG = {
 	Tap = true,
-	TapInterval = 0.12, -- >= GameConfig.ClickFxInterval (0.11)
+	TapInterval = 0.12,
 	Hatch = true,
-	Egg = nil :: string?, -- nil = trứng đắt nhất đủ tiền mua
+	Egg = nil :: string?,
 	EquipBest = true,
-	EquipBestMode = "Clicks", -- "Clicks" | "Gems" | "Luck"
+	EquipBestMode = "Clicks",
 	EquipBestInterval = 30,
 	AntiAfk = true,
 	Webhook = true,
-	WebhookUrl = "", -- Discord webhook; lưu vào file để lần sau tự nạp
-	RareOneIn = 1000, -- gửi khi pet có tỉ lệ 1/OneIn >= ngưỡng này
+	WebhookUrl = "",
+	RareOneIn = 1000,
 }
 
 local WEBHOOK_FILE = "TapFarm_webhook.txt"
@@ -56,7 +53,6 @@ local function tapBlocked(): boolean
 		or player:GetAttribute("DiggingActive") == true
 end
 
--- Vòng lặp đọc cờ CONFIG mỗi lượt để UI bật/tắt có hiệu lực ngay.
 local function loop(flag: string, interval: () -> number, body: () -> ())
 	table.insert(threads, task.spawn(function()
 		while running do
@@ -69,7 +65,6 @@ local function loop(flag: string, interval: () -> number, body: () -> ())
 	end))
 end
 
--- Tap: cùng payload với TapController, sequence riêng để không trùng client gốc.
 local seq = 1e6
 loop("Tap", function() return CONFIG.TapInterval end, function()
 	if tapBlocked() then return end
@@ -77,7 +72,6 @@ loop("Tap", function() return CONFIG.TapInterval end, function()
 	TapService.TapRequested:Fire({ Auto = false, ClientSequence = seq, Source = "button" })
 end)
 
--- Hatch: dùng auto-hatch có sẵn của game; chỉ chọn trứng và bật lại khi bị tắt.
 local function bestEgg(d: any): string?
 	local coins = d.Currencies.Coins or 0
 	local best, bestPrice = nil, -1
@@ -92,7 +86,7 @@ end
 
 local function stopHatch()
 	local egg = EggController:GetAutoHatchEgg()
-	if egg ~= nil then EggController:ToggleAutoHatch(egg) end -- toggle trên trứng đang chạy = tắt
+	if egg ~= nil then EggController:ToggleAutoHatch(egg) end
 end
 
 loop("Hatch", function() return 3 end, function()
@@ -110,8 +104,6 @@ loop("EquipBest", function() return CONFIG.EquipBestInterval end, function()
 	PetService.PetActionRequested:Fire({ Action = "EquipBest", Mode = CONFIG.EquipBestMode })
 end)
 
--- Anti-AFK: Roblox kick sau 20 phút không input; Idled bắn ở ~2 phút, giả lập một input.
--- Potassium trả nil cho VirtualUser, nên ưu tiên VirtualInputManager.
 local okVim, VIM = pcall(game.GetService, game, "VirtualInputManager")
 local okVu, VirtualUser = pcall(game.GetService, game, "VirtualUser")
 table.insert(conns, player.Idled:Connect(function()
@@ -125,8 +117,6 @@ table.insert(conns, player.Idled:Connect(function()
 	end
 end))
 
--- Game tự gửi ReconnectRequested (chuyển server) khi Idled báo >= ReconnectConfig.IdleSeconds (1000s).
--- Input ảo không reset bộ đếm Idled, nên tắt riêng kết nối Idled của ReconnectController.
 local disabledIdled = {}
 local function setGameIdleRejoin(enabled: boolean)
 	if not getconnections then return end
@@ -140,7 +130,6 @@ local function setGameIdleRejoin(enabled: boolean)
 end
 if CONFIG.AntiAfk then setGameIdleRejoin(false) end
 
--- Webhook pet hiếm: nghe EggHatchResult (Pets = { {Name, Rarity, Tier, OneIn, Power, AutoDeleted} }).
 local HttpService = game:GetService("HttpService")
 local httpRequest = request or http_request or (syn and syn.request)
 local EggService = service("EggService")
@@ -189,8 +178,6 @@ table.insert(conns, EggService.EggHatchResult:Connect(function(r)
 	end
 end))
 
---------------------------------------------------------------------- UI
-
 local C = {
 	bg = Color3.fromRGB(22, 24, 30),
 	panel = Color3.fromRGB(32, 35, 44),
@@ -210,7 +197,6 @@ end
 local function corner(r: number) return make("UICorner", { CornerRadius = UDim.new(0, r) }) end
 
 local gui = make("ScreenGui", { Name = "TapFarmUI", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
--- gethui() của Potassium đôi khi lỗi cloneref(nil); thử lần lượt gethui → CoreGui → PlayerGui.
 local okHui, hui = pcall(function() return gethui and gethui() end)
 local okCore, core = pcall(game.GetService, game, "CoreGui")
 gui.Parent = (okHui and hui) or (okCore and core) or player:WaitForChild("PlayerGui")
@@ -314,7 +300,6 @@ toggle("Auto Hatch", "Hatch")
 input("Egg", CONFIG.Egg or "", "auto (best)", function(s)
 	s = s:gsub("^%s+", ""):gsub("%s+$", "")
 	if s == "" then CONFIG.Egg = nil return "" end
-	-- khớp không phân biệt hoa thường với tên trong LaunchEggConfig
 	for name in LaunchEggConfig do
 		if name:lower() == s:lower() then CONFIG.Egg = name return name end
 	end
@@ -347,7 +332,6 @@ stats.TextWrapped = true
 stats.Font = Enum.Font.Code
 stats.TextSize = 12
 
--- Kéo thả bằng header.
 do
 	local dragging, startPos, startMouse
 	table.insert(conns, header.InputBegan:Connect(function(io)
@@ -373,7 +357,6 @@ minBtn.MouseButton1Click:Connect(function()
 	minBtn.Text = body.Visible and "–" or "+"
 end)
 
--- Thống kê: tap/s và trứng/phút tính trên cửa sổ trượt ~10s.
 table.insert(threads, task.spawn(function()
 	local samples = {}
 	while running do
@@ -390,8 +373,6 @@ table.insert(threads, task.spawn(function()
 		task.wait(1)
 	end
 end))
-
---------------------------------------------------------------------- lifecycle
 
 local function stop()
 	running = false
