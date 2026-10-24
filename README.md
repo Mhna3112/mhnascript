@@ -5,7 +5,7 @@ Auto farm cho **Tap Simulator REBORN**: Auto Tap, Auto Hatch, Auto Equip Best, A
 ## Chạy
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Mhna3112/TapFarm/main/TapFarm.luau"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Mhna3112/mhnascript/main/TapFarm.luau"))()
 ```
 
 Tắt: nút **X** trên UI hoặc `getgenv().TapFarm.Stop()`.
